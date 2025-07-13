@@ -1,53 +1,64 @@
-# Distributed music streams processing using Airflow, Spark & Dynamodb
+# Distributed Music Streams Processing Lab
 
 ![System Architecture](data/images/system_architecture.png)
 
-A **lightweight, serverless‑friendly ETL pipeline** that lands raw music‑stream CSVs in **Amazon S3**, transforms them with **AWS Glue (PySpark)**, and publishes aggregated metrics to **Amazon DynamoDB**—all orchestrated by a concise **Apache Airflow** DAG that runs every five minutes.
+---
+
+## 🎯 Business Goal
+Provide **near‑real‑time listener & track analytics** without the complexity of a full‑blown streaming stack:
+
+* Random user‑stream events are landed as small CSV objects in an S3 *incoming* prefix.
+* An **Apache Airflow** DAG checks that prefix every **5 minutes**. When files exist, it kicks off processing—otherwise it simply sleeps until the next tick.
+* **AWS Glue (PySpark)** cleanses, enriches, and converts the data to columnar Parquet.
+* A follow‑up **Glue Python‑Shell** task aggregates and upserts metrics into **Amazon DynamoDB**, where dashboards & Lambda APIs read them instantly.
+
+This micro‑batch design acts "stream‑like" while staying cost‑efficient and serverless.
 
 ---
 
-## ⚙️  How the Pipeline Flows
+## ⚙️ Pipeline Steps
 
-| Step | Task | What Happens | Proof‑of‑Life |
-|------|------|--------------|---------------|
-| 1 | `check_files` | Airflow senses new objects in the *incoming* S3 prefix. | – |
-| 2 | `glue_pyspark` | Glue Spark job cleans, enriches & repartitions data → writes Parquet back to S3. | ![PySpark Success](data/images/aws_glue_data_transformation_spark_job_success.png) |
-| 3 | `glue_dynamo` | Glue Python‑shell job aggregates & upserts records into DynamoDB. | ![Dynamo Load Success](data/images/aws_glue_inserting_into_dynamodb_python_job_success.png) |
-| 4 | `move_files` | Original CSVs are archived to a dated folder. | – |
+| # | Airflow Task  | Purpose | Success Proof |
+|---|--------------|---------|----------------|
+| 1 | **`check_files`** | Detect new CSVs in `s3://music-streams/incoming/`. | – |
+| 2 | **`glue_pyspark`** | Transform & repartition → Parquet in curated S3 prefix. | ![Spark Success](data/images/aws_glue_data_transformation_spark_job_success.png) |
+| 3 | **`glue_dynamo`** | Aggregate & upsert into DynamoDB. | ![Dynamo Success](data/images/aws_glue_inserting_into_dynamodb_python_job_success.png) |
+| 4 | **`move_files`** | Archive raw CSVs to `s3://music-streams/archive/DATE/`. | – |
 
-A successful run in the Airflow UI looks like this:
+Overall DAG window:
 
-![DAG Success](data/images/airflow_dag_success.png)
+![Airflow DAG](data/images/airflow_dag_success.png)
 
-Sample intermediate output and DynamoDB view:
+Intermediate & final outputs:
 
-<p float="left">
-  <img src="data/images/intermediate_spark_output.png" width="48%" />
-  <img src="data/images/dynamo_db_final_output.png" width="48%" />
-</p>
+![Parquet Preview](data/images/intermediate_spark_output.png)
+
+![Dynamo View](data/images/dynamo_db_final_output.png)
 
 ---
 
-## 🗂️  Repo Layout
-
-```
+## 🗂️ Repository Layout
+```text
 ├─ data/images/                 # PNGs & diagrams
-├─ dag-glue-workflow.py         # Airflow DAG (main orchestrator)
+├─ dag-glue-workflow.py         # Airflow DAG (orchestrator)
 ├─ glue-pyspark.py              # Spark ETL script
 ├─ glue-dynamo.py               # DynamoDB loader script
-├─ local-docker-development.sh  # One‑shot LocalStack + Airflow dev environment
-└─ README.md
+├─ local-docker-development.sh  # LocalStack + Airflow helper
+└─ README.md                    # You’re reading it ✔︎
 ```
 
 ---
 
-## 🚀  Quick Start (Local)
-
+## 🚀 Quick Start (Local)
 ```bash
-# spin up local Airflow + LocalStack
+# Boot LocalStack + Airflow
 sh local-docker-development.sh
+
+# Upload sample CSV
+aws --endpoint-url=http://localhost:4566 \
+    s3 cp sample_plays.csv s3://music-streams/incoming/
 ```
-Then drop some CSVs into `s3://music-streams/incoming/` (LocalStack bucket) and watch the DAG run.
+The DAG will auto‑trigger within the next 5‑minute cycle and push results to the local DynamoDB table.
 
 ---
 
