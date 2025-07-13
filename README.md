@@ -1,6 +1,6 @@
 # Distributed Music Streams Processing Lab
 
-![System Architecture](data/images/system_architecture.png)
+![System Architecture](images/system_architecture.png)
 
 ---
 
@@ -21,19 +21,19 @@ This micro‑batch design acts "stream‑like" while staying cost‑efficient an
 | # | Airflow Task  | Purpose | Success Proof |
 |---|--------------|---------|----------------|
 | 1 | **`check_files`** | Detect new CSVs in `s3://music-streams/incoming/`. | – |
-| 2 | **`glue_pyspark`** | Transform & repartition → Parquet in curated S3 prefix. | ![Spark Success](data/images/aws_glue_data_transformation_spark_job_success.png) |
-| 3 | **`glue_dynamo`** | Aggregate & upsert into DynamoDB. | ![Dynamo Success](data/images/aws_glue_inserting_into_dynamodb_python_job_success.png) |
+| 2 | **`glue_pyspark`** | Transform & repartition → Parquet in curated S3 prefix. | ![Spark Success](images/aws_glue_data_transformation_spark_job_success.png) |
+| 3 | **`glue_dynamo`** | Aggregate & upsert into DynamoDB. | ![Dynamo Success](images/aws_glue_inserting_into_dynamodb_python_job_success.png) |
 | 4 | **`move_files`** | Archive raw CSVs to `s3://music-streams/archive/DATE/`. | – |
 
 Overall DAG window:
 
-![Airflow DAG](data/images/airflow_dag_success.png)
+![Airflow DAG](images/airflow_dag_success.png)
 
 Intermediate & final outputs:
 
-![Parquet Preview](data/images/intermediate_spark_output.png)
+![Parquet Preview](images/intermediate_spark_output.png)
 
-![Dynamo View](data/images/dynamo_db_final_output.png)
+![Dynamo View](images/dynamo_db_final_output.png)
 
 ---
 
